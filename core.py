@@ -42,7 +42,6 @@ def dijkstra(graph, start):
 
     while open_set:
         current = min(open_set, key=distances.get)
-        print(current)
         open_set.remove(current)
         closed.add(current)
 
