@@ -3,7 +3,9 @@ import matplotlib.pyplot as plt
 import requests
 import gzip
 import shutil
-import heapq
+import sys
+from collections import defaultdict
+from heapq import heappop, heappush
 
 
 def plot_graph(graph, figsize=(8, 6), arrows=False):
@@ -12,7 +14,6 @@ def plot_graph(graph, figsize=(8, 6), arrows=False):
 
     edge_labels = nx.get_edge_attributes(graph, "weight")
 
-    # Draw the graph
     nx.draw(
         graph,
         pos,
@@ -22,7 +23,6 @@ def plot_graph(graph, figsize=(8, 6), arrows=False):
         arrows=arrows,
     )
 
-    # Draw the edge labels
     nx.draw_networkx_edge_labels(
         graph, pos, edge_labels=edge_labels, ax=ax, font_size=6
     )
@@ -115,6 +115,7 @@ def prim(graph, start):
 
     return minimum_spanning_tree, total_weight
 
+
 def kruskal(graph):
     edges = [(n1, n2, graph[n1][n2]) for n1 in graph.keys() for n2 in graph[n1]]
     edges_sorted = sorted(edges, key=lambda x: x[2])
@@ -133,3 +134,57 @@ def kruskal(graph):
         if len(minimum_spanning_tree) == n_graph:
             break
     return minimum_spanning_tree, total_cost
+
+
+def ford_fulkerson(graph, source, terminal):
+    # Cria o grafico de folga igual ao inicial dado que o vetor f é nulo
+    graph_f = defaultdict(dict)
+    for u in graph:
+        for v in graph[u]:
+            graph_f[u][v] = graph[u][v]
+            graph_f[v][u] = 0
+
+    max_flow = 0
+
+    while True:
+        # Encontra um caminho de s (source) para t (terminal)
+        path, capacity = dijkstra_ford_fulkerson(graph_f, source, terminal)
+
+        # Finaliza o algoritmo
+        if path is None:
+            break
+
+        # Atualiza o grafico de folga
+        for u, v in zip(path, path[1:]):
+            graph_f[u][v] -= capacity
+            graph_f[v][u] += capacity
+
+        # atualiza fluxo y_st
+        max_flow += capacity
+
+    return max_flow
+
+
+def dijkstra_ford_fulkerson(graph, source, terminal):
+    queue = [(0, source, sys.maxsize, [source])]
+
+    visited = set()
+
+    while queue:
+        cost, node, min_capacity, path = heappop(
+            queue
+        )  # retira o arco de menor custo da fila
+
+        if node == terminal:
+            return path, min_capacity
+
+        if node not in visited:
+            visited.add(node)
+            for neighbor, capacity in graph[node].items():
+                if capacity > 0:
+                    new_min_capacity = min(min_capacity, capacity)
+                    heappush(
+                        queue, (cost + 1, neighbor, new_min_capacity, path + [neighbor])
+                    )
+
+    return None, 0
